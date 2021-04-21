@@ -3,7 +3,7 @@ hdhr-dissector
 
 Wireshark/tshark Plugin in C for [HDHomerun Packets](https://github.com/Silicondust/libhdhomerun/blob/master/hdhomerun_pkt.h).
 
-NOTE: This for makes the dissector work for wireshark 3.
+NOTE: This fork makes the dissector work for wireshark 3.
 # Build
 
 - Download Wireshark source-code.
