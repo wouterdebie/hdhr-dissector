@@ -1,9 +1,4 @@
 # Makefile.am
-# Automake file for HDHomeRun plugin
-# By Steve Limkemann <stevelim@dgtech.com>
-# Copyright 1998 Steve Limkemann
-#
-# $Id: Makefile.am 48261 2013-03-12 06:53:39Z jake $
 #
 # Wireshark - Network traffic analyzer
 # By Gerald Combs <gerald@wireshark.org>
@@ -22,19 +17,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
 
 include $(top_srcdir)/Makefile.am.inc
+include ../Makefile.am.inc
 
-AM_CPPFLAGS = -I$(top_srcdir)
+# the name of the plugin
+PLUGIN_NAME = hdhr
 
-include Makefile.common
+# Non-generated sources to be scanned for registration routines
+NONGENERATED_REGISTER_C_FILES = \
+	packet-hdhr.c
 
-if HAVE_WARNINGS_AS_ERRORS
-AM_CFLAGS = -Werror
-endif
+# Non-generated sources
+NONGENERATED_C_FILES = \
+	$(NONGENERATED_REGISTER_C_FILES)
 
-plugindir = @plugindir@
+# Headers.
+CLEAN_HEADER_FILES = \
+	packet-hdhr.h
+
+HEADER_FILES = \
+	$(CLEAN_HEADER_FILES)
 
 plugin_LTLIBRARIES = hdhr.la
 
@@ -44,76 +47,11 @@ hdhr_la_SOURCES = \
 	$(SRC_FILES)	\
 	$(HEADER_FILES)
 
-hdhr_la_LDFLAGS = -module -avoid-version
-hdhr_la_LIBADD = @PLUGIN_LIBS@
+hdhr_la_CPPFLAGS = $(AM_CPPFLAGS) $(PLUGIN_CPPFLAGS)
 
-# Libs must be cleared, or else libtool won't create a shared module.
-# If your module needs to be linked against any particular libraries,
-# add them here.
-LIBS =
+hdhr_la_CFLAGS = $(AM_CFLAGS) $(PLUGIN_CFLAGS)
 
-#
-# Build plugin.c, which contains the plugin version[] string, a
-# function plugin_register() that calls the register routines for all
-# protocols, and a function plugin_reg_handoff() that calls the handoff
-# registration routines for all protocols.
-#
-# We do this by scanning sources.  If that turns out to be too slow,
-# maybe we could just require every .o file to have an register routine
-# of a given name (packet-aarp.o -> proto_register_aarp, etc.).
-#
-# Formatting conventions:  The name of the proto_register_* routines an
-# proto_reg_handoff_* routines must start in column zero, or must be
-# preceded only by "void " starting in column zero, and must not be
-# inside #if.
-#
-# REGISTER_SRC_FILES is assumed to have all the files that need to be scanned.
-#
-# For some unknown reason, having a big "for" loop in the Makefile
-# to scan all the files doesn't work with some "make"s; they seem to
-# pass only the first few names in the list to the shell, for some
-# reason.
-#
-# Therefore, we have a script to generate the plugin.c file.
-# The shell script runs slowly, as multiple greps and seds are run
-# for each input file; this is especially slow on Windows.  Therefore,
-# if Python is present (as indicated by PYTHON being defined), we run
-# a faster Python script to do that work instead.
-#
-# The first argument is the directory in which the source files live.
-# The second argument is "plugin", to indicate that we should build
-# a plugin.c file for a plugin.
-# All subsequent arguments are the files to scan.
-#
-plugin.c: $(REGISTER_SRC_FILES) Makefile.common $(top_srcdir)/tools/make-dissector-reg \
-    $(top_srcdir)/tools/make-dissector-reg.py
-	@if test -n "$(PYTHON)"; then \
-		echo Making plugin.c with python ; \
-		$(PYTHON) $(top_srcdir)/tools/make-dissector-reg.py $(srcdir) \
-		    plugin $(REGISTER_SRC_FILES) ; \
-	else \
-		echo Making plugin.c with shell script ; \
-		$(top_srcdir)/tools/make-dissector-reg $(srcdir) \
-		    $(plugin_src) plugin $(REGISTER_SRC_FILES) ; \
-	fi
-
-#
-# Currently plugin.c can be included in the distribution because
-# we always build all protocol dissectors. We used to have to check
-# whether or not to build the snmp dissector. If we again need to
-# variably build something, making plugin.c non-portable, uncomment
-# the dist-hook line below.
-#
-# Oh, yuk.  We don't want to include "plugin.c" in the distribution, as
-# its contents depend on the configuration, and therefore we want it
-# to be built when the first "make" is done; however, Automake insists
-# on putting *all* source into the distribution.
-#
-# We work around this by having a "dist-hook" rule that deletes
-# "plugin.c", so that "dist" won't pick it up.
-#
-#dist-hook:
-#	@rm -f $(distdir)/plugin.c
+hdhr_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 
 CLEANFILES = \
 	hdhr \
@@ -124,12 +62,5 @@ MAINTAINERCLEANFILES = \
 	plugin.c
 
 EXTRA_DIST = \
-	Makefile.common		\
-	Makefile.nmake		\
-	moduleinfo.nmake	\
 	plugin.rc.in		\
 	CMakeLists.txt
-
-checkapi:
-	$(PERL) $(top_srcdir)/tools/checkAPIs.pl -g abort -g termoutput -build \
-		$(CLEAN_SRC_FILES) $(CLEAN_HEADER_FILES)

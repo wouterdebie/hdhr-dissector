@@ -1,7 +1,5 @@
 # CMakeLists.txt
 #
-# $Id: CMakeLists.txt 43536 2012-06-28 22:56:06Z darkjames $
-#
 # Wireshark - Network traffic analyzer
 # By Gerald Combs <gerald@wireshark.org>
 # Copyright 1998 Gerald Combs
@@ -21,6 +19,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+include(WiresharkPlugin)
+
+# Plugin name and version info (major minor micro extra)
+set_module_info(hdhr 0 0 1 0)
+
 set(DISSECTOR_SRC
 	packet-hdhr.c
 )
@@ -34,32 +37,34 @@ set(CLEAN_FILES
 	${PLUGIN_FILES}
 )
 
-if (WERROR)
+if (WERROR_COMMON_FLAGS)
 	set_source_files_properties(
 		${CLEAN_FILES}
 		PROPERTIES
-		COMPILE_FLAGS -Werror
+		COMPILE_FLAGS ${WERROR_COMMON_FLAGS}
 	)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-register_dissector_files(plugin.c
+register_plugin_files(plugin.c
 	plugin
 	${DISSECTOR_SRC}
 )
 
-add_library(hdhr ${LINK_MODE_MODULE}
-	${PLUGIN_FILES}
-)
-set_target_properties(hdhr PROPERTIES PREFIX "")
-set_target_properties(hdhr PROPERTIES LINK_FLAGS "${WS_LINK_FLAGS}")
+add_plugin_library(hdhr epan)
 
 target_link_libraries(hdhr epan)
 
-install(TARGETS hdhr
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/@CPACK_PACKAGE_NAME@/plugins/${CPACK_PACKAGE_VERSION} NAMELINK_SKIP
-	RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/@CPACK_PACKAGE_NAME@/plugins/${CPACK_PACKAGE_VERSION}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/@CPACK_PACKAGE_NAME@/plugins/${CPACK_PACKAGE_VERSION}
-)
+install_plugin(hdhr epan)
 
+file(GLOB DISSECTOR_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.h")
+CHECKAPI(
+	NAME
+	  hdhr
+	SWITCHES
+	  -g abort -g termoutput -build
+	SOURCES
+	  ${DISSECTOR_SRC}
+	  ${DISSECTOR_HEADERS}
+)
